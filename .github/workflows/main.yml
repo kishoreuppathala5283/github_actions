@@ -16,9 +16,9 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.HOST }}         
-          username: ${{ secrets.USERNAME }} 
-          key: ${{ secrets.SSH_PRIVATE_KEY }} 
+          host: ${{ secrets.EC2_HOST }}        # Must match exactly what you created in GitHub secrets
+          username: ${{ secrets.EC2_USER }}    # e.g. ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}      # Your private SSH key
           port: 22
           script: |
             cd /var/www/github_actions
