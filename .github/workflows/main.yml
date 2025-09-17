@@ -1,32 +1,16 @@
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests (skipped for now)
-        run: echo "No tests yet, skipping"
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /var/www/app || mkdir -p /var/www/app && cd /var/www/app
-            git pull origin main || git clone https://github.com/${{ github.repository }} .
-            npm install --production
-            pm2 restart app || pm2 start index.js --name app
+- name: Deploy to EC2
+  uses: appleboy/ssh-action@v1.0.0
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ${{ secrets.EC2_USER }}
+    key: ${{ secrets.EC2_SSH_KEY }}
+    port: 22
+    script: |
+      cd /var/www/app || mkdir -p /var/www/app && cd /var/www/app
+      if [ -d .git ]; then
+        git pull origin main
+      else
+        git clone https://github.com/${{ github.repository }} .
+      fi
+      npm install --production
+      pm2 restart app || pm2 start index.js --name app
