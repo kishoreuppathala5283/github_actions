@@ -1,35 +1,37 @@
-name: Node.js CI/CD on Amazon Linux
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    # Deploy files to EC2
-    - name: Deploy to AWS EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "."                     # Upload everything except ignored files
-        target: "/var/www/github_actions"
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    # Restart app using PM2
-    - name: Restart PM2 application
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /var/www/github_actions
-          npm install --production
-          pm2 restart ecosystem.config.js --env production
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/app
+            git pull origin main
+            npm install --production
+            pm2 restart app || pm2 start app.js --name app
