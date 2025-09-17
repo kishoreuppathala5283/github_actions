@@ -1,27 +1,34 @@
-name: Deploy to EC2
+name: Node.js CI/CD on Amazon Linux
 
 on:
   push:
-    branches:
-      - main   # Deploy only when pushing to main branch
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v2
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}        # Must match exactly what you created in GitHub secrets
-          username: ${{ secrets.EC2_USER }}    # e.g. ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}      # Your private SSH key
-          port: 22
-          script: |
-            cd /var/www/github_actions
-            git pull origin main
-            npm install
-            pm2 restart ecosystem.config.js
+    - name: Install dependencies
+      run: npm install
+
+    - name: Deploy to AWS EC2
+      uses: appleboy/scp-action@main
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "./"  # This now correctly points to the current directory
+        target: "/var/www/github_actions"
+
+    - name: Restart PM2 application
+      uses: appleboy/ssh-action@main
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /var/www/github_actions
+          pm2 reload all  # This command restarts your application
