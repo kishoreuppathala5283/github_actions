@@ -9,26 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: npm install
-
+    # Deploy files to EC2
     - name: Deploy to AWS EC2
-      uses: appleboy/scp-action@main
+      uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "./"  # This now correctly points to the current directory
+        source: "."                     # Upload everything except ignored files
         target: "/var/www/github_actions"
 
+    # Restart app using PM2
     - name: Restart PM2 application
-      uses: appleboy/ssh-action@main
+      uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /var/www/github_actions
-          pm2 reload all  # This command restarts your application
+          npm install --production
+          pm2 restart ecosystem.config.js --env production
